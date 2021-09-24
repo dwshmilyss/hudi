@@ -53,7 +53,7 @@ public class HoodieExampleSparkUtils {
 
   public static SparkSession buildSparkSession(String appName, Map<String, String> additionalConfigs) {
 
-    SparkSession.Builder builder = SparkSession.builder().appName(appName);
+    SparkSession.Builder builder = SparkSession.builder().appName(appName).master("local[2]");
     additionalConfigs.forEach(builder::config);
     return builder.getOrCreate();
   }
