@@ -18,6 +18,7 @@
 
 package org.apache.hudi.examples.spark
 
+import com.github.jsonzou.jmockdata.mocker.StringMocker
 import org.apache.hudi.DataSourceReadOptions.{BEGIN_INSTANTTIME, END_INSTANTTIME, QUERY_TYPE, QUERY_TYPE_INCREMENTAL_OPT_VAL}
 import org.apache.hudi.DataSourceWriteOptions
 import org.apache.hudi.DataSourceWriteOptions.{DELETE_OPERATION_OPT_VAL, DELETE_PARTITION_OPERATION_OPT_VAL, INSERT_DROP_DUPS, OPERATION, OPERATION_OPT_KEY, PARTITIONPATH_FIELD, PARTITIONPATH_FIELD_OPT_KEY, PARTITIONS_TO_DELETE, PAYLOAD_CLASS_OPT_KEY, PRECOMBINE_FIELD, PRECOMBINE_FIELD_OPT_KEY, RECORDKEY_FIELD, RECORDKEY_FIELD_OPT_KEY}
@@ -25,7 +26,7 @@ import org.apache.hudi.QuickstartUtils.getQuickstartWriteConfigs
 import org.apache.hudi.common.model.{HoodieAvroPayload, OverwriteNonDefaultsWithLatestAvroPayload, WriteOperationType}
 import org.apache.hudi.config.{HoodieIndexConfig, HoodieLayoutConfig, HoodieWriteConfig}
 import org.apache.hudi.config.HoodieWriteConfig.{TABLE_NAME, TBL_NAME}
-import org.apache.hudi.examples.common.{HoodieExampleDataGenerator, HoodieExampleSparkUtils}
+import org.apache.hudi.examples.common.{Contact, HoodieExampleDataGenerator, HoodieExampleSparkUtils}
 import org.apache.hudi.hive.HiveSyncConfig
 import org.apache.hudi.index.HoodieIndex.IndexType
 import org.apache.hudi.index.HoodieIndex.IndexType.BUCKET
@@ -36,8 +37,10 @@ import org.apache.spark.sql.SaveMode.{Append, Overwrite}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
 import org.springframework.util.StopWatch
+import com.github.jsonzou.jmockdata.{DataConfig, JMockData, MockConfig}
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -70,7 +73,6 @@ object HoodieDataSourceExample {
 
   case class DeletePartition1(id: Int, ts: Int)
 
-  case class Contact(id: Long, ts: Long, gender: String)
 
   val schema = StructType(List(
     StructField("id", LongType, true),
@@ -98,7 +100,7 @@ object HoodieDataSourceExample {
 
     val stopWatch:StopWatch = new StopWatch()
     stopWatch.start()
-    testInitHudi(spark,tablePath,tableName,WriteOperationType.UPSERT.value())
+    testInitHudi(spark,tablePath,tableName,WriteOperationType.INSERT.value())
     stopWatch.stop()
     println(stopWatch.prettyPrint())
 
@@ -126,6 +128,7 @@ object HoodieDataSourceExample {
   }
 
   /**
+   * TestPartition
    * bucket hash index:
    * insert
    * StopWatch '': running time (millis) = 42277
@@ -139,14 +142,28 @@ object HoodieDataSourceExample {
    *
    * upsert
    * StopWatch '': running time (millis) = 107004
+   *
+   *
+   *
    */
   def testInitHudi(spark: SparkSession, tablePath: String, tableName: String, operation: String) = {
-    val list = new ListBuffer[TestPartition]();
+//    val list = new ListBuffer[TestPartition]()
+    val list = new ListBuffer[Contact]()
+    val config = new MockConfig
+    val dateDC = config.subConfig("date")
+    config.registerMocker(new StringMocker() {
+      override def mock(mockConfig: DataConfig): String = { // 修改date字段为固定值
+        if (dateDC eq mockConfig) return "2020/01/01"
+        super.mock(mockConfig)
+      }
+    }, classOf[String])
     for (i <- 1 to 1000000) {
-      list.+=:(TestPartition(i, 1, "aa" + i, "bb" + i, "2020/01/11"))
+      val mock = JMockData.mock(classOf[Contact],config)
+      list.+=:(mock)
+//      list.+=:(TestPartition(i, 1, "aa" + i, "bb" + i, "2020/01/11"))
     }
     println(list.size)
-    val df = spark.createDataFrame(list)
+    val df = spark.createDataFrame(list.asJava,classOf[Contact])
     df.write.format("org.apache.hudi").
       options(getQuickstartWriteConfigs).
       option(PRECOMBINE_FIELD.key(), "ts").
