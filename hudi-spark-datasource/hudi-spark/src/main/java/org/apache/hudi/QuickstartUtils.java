@@ -240,10 +240,10 @@ public class QuickstartUtils {
 
   public static Map<String, String> getQuickstartWriteConfigs() {
     Map<String, String> demoConfigs = new HashMap<>();
-    demoConfigs.put("hoodie.insert.shuffle.parallelism", "2");
-    demoConfigs.put("hoodie.upsert.shuffle.parallelism", "2");
-    demoConfigs.put("hoodie.bulkinsert.shuffle.parallelism", "2");
-    demoConfigs.put("hoodie.delete.shuffle.parallelism", "2");
+    demoConfigs.put("hoodie.insert.shuffle.parallelism", "200");
+    demoConfigs.put("hoodie.upsert.shuffle.parallelism", "200");
+    demoConfigs.put("hoodie.bulkinsert.shuffle.parallelism", "200");
+    demoConfigs.put("hoodie.delete.shuffle.parallelism", "200");
     return demoConfigs;
   }
 }

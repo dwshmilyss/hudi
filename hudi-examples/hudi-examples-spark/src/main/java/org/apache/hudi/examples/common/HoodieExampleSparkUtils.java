@@ -53,7 +53,11 @@ public class HoodieExampleSparkUtils {
 
   public static SparkSession buildSparkSession(String appName, Map<String, String> additionalConfigs) {
 
-    SparkSession.Builder builder = SparkSession.builder().appName(appName);
+    SparkSession.Builder builder = SparkSession.builder().appName(appName).master("local[*]")
+            .config("spark.driver.memory","6g")
+            .config("spark.executor.memory","2g")
+            .config("spark.driver.extraJavaOptions","-Dsun.reflect.inflationThreshold=2147483647 -XX:SoftRefLRUPolicyMSPerMB=1000 -XX:NewSize=300m -Xms:900m -Xmx:900m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m -XX:SurvivorRatio=2 -XX:+ExplicitGCInvokesConcurrentAndUnloadsClasses -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:CMSInitiatingOccupancyFraction=70 -XX:+UseCMSInitiatingOccupancyOnly -XX:+UnlockDiagnosticVMOptions")
+            .config("spark.executor.extraJavaOptions","-Dsun.reflect.inflationThreshold=2147483647 -XX:SoftRefLRUPolicyMSPerMB=1000 -XX:NewSize=400m -XX:SurvivorRatio=2 -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m -XX:SoftRefLRUPolicyMSPerMB=5000 -XX:+ExplicitGCInvokesConcurrentAndUnloadsClasses -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:CMSInitiatingOccupancyFraction=70 -XX:+UseCMSInitiatingOccupancyOnly -XX:+UnlockDiagnosticVMOptions");
     additionalConfigs.forEach(builder::config);
     return builder.getOrCreate();
   }

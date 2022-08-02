@@ -162,7 +162,7 @@
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -173,7 +173,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
