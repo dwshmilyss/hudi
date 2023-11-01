@@ -1717,7 +1717,8 @@
     <repository>
       <id>Maven Central</id>
       <name>Maven Repository</name>
-      <url>https://repo.maven.apache.org/maven2</url>
+<!--      <url>https://repo.maven.apache.org/maven2</url>-->
+      <url>http://maven.aliyun.com/nexus/content/groups/public</url>
       <releases>
         <enabled>true</enabled>
       </releases>

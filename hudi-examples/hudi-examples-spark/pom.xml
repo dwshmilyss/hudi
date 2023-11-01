@@ -130,6 +130,7 @@
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-examples-common</artifactId>
+            <scope>compile</scope>
             <version>${project.version}</version>
             <exclusions>
                 <exclusion>
@@ -143,64 +144,80 @@
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-client-common</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-java-client</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-spark-client</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-utilities_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-spark_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-spark-common_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-hadoop-mr</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-timeline-service</artifactId>
             <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <!-- Spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-hive_${scala.binary.version}</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <!-- Hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <!-- Parquet -->
@@ -214,23 +231,26 @@
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.parquet</groupId>
             <artifactId>parquet-avro</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <!--  Hive  -->
         <dependency>
             <groupId>${hive.groupid}</groupId>
             <artifactId>hive-common</artifactId>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>${hive.groupid}</groupId>
             <artifactId>hive-exec</artifactId>
             <version>${hive.version}</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
             <classifier>${hive.exec.classifier}</classifier>
             <exclusions>
                 <exclusion>
@@ -246,6 +266,57 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>${hive.groupid}</groupId>
+            <artifactId>hive-metastore</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>${hive.groupid}</groupId>
+            <artifactId>hive-serde</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hive.shims</groupId>
+            <artifactId>hive-shims-common</artifactId>
+            <version>2.3.1</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hive.shims</groupId>
+            <artifactId>hive-shims-0.23</artifactId>
+            <version>2.3.1</version>
+            <scope>compile</scope>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.30</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo-shaded</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <!-- Hudi Tests -->
