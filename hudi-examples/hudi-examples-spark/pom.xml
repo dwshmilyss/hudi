@@ -219,6 +219,12 @@
             <artifactId>hadoop-auth</artifactId>
             <scope>compile</scope>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.apache.hadoop</groupId>-->
+<!--            <artifactId>hadoop-hdfs-client</artifactId>-->
+<!--            <version>2.10.2</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
 
         <!-- Parquet -->
         <dependency>
@@ -287,6 +293,16 @@
             <groupId>org.apache.hive.shims</groupId>
             <artifactId>hive-shims-0.23</artifactId>
             <version>2.3.1</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-jdbc</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-service</artifactId>
             <scope>compile</scope>
         </dependency>
 

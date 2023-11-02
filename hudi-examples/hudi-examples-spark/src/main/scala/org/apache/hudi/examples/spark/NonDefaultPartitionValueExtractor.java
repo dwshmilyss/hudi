@@ -19,7 +19,7 @@ public class NonDefaultPartitionValueExtractor implements PartitionValueExtracto
                 ValidationUtils.checkArgument(moreSplit.length == 2, "Partition Field (" + s + ") not in expected format");
                 return moreSplit[1];
             } else if (s.equals("default")) {
-                return "0";
+                return null;
             } else {
                 return s;
             }
