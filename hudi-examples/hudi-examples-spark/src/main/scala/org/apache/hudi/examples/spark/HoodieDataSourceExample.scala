@@ -21,15 +21,15 @@ package org.apache.hudi.examples.spark
 import org.apache.hadoop.conf.Configuration
 import org.apache.hudi.DataSourceReadOptions.{BEGIN_INSTANTTIME, END_INSTANTTIME, QUERY_TYPE, QUERY_TYPE_INCREMENTAL_OPT_VAL}
 import org.apache.hudi.DataSourceWriteOptions.{DELETE_OPERATION_OPT_VAL, DELETE_PARTITION_OPERATION_OPT_VAL, HIVE_PARTITION_EXTRACTOR_CLASS_OPT_KEY, OPERATION, OPERATION_OPT_KEY, PARTITIONPATH_FIELD, PARTITIONPATH_FIELD_OPT_KEY, PARTITIONS_TO_DELETE, PAYLOAD_CLASS_OPT_KEY, PRECOMBINE_FIELD, PRECOMBINE_FIELD_OPT_KEY, RECORDKEY_FIELD, RECORDKEY_FIELD_OPT_KEY}
-import org.apache.hudi.{DataSourceWriteOptions, HoodieSparkUtils}
+import org.apache.hudi.{DataSourceReadOptions, DataSourceWriteOptions, HoodieSparkUtils}
 import org.apache.hudi.QuickstartUtils.getQuickstartWriteConfigs
 import org.apache.hudi.common.config.HoodieStorageConfig
-import org.apache.hudi.common.model.{EmptyHoodieRecordPayload, HoodieAvroPayload, OverwriteWithLatestAvroPayload, WriteOperationType}
-import org.apache.hudi.common.table.HoodieTableMetaClient
+import org.apache.hudi.common.model.{EmptyHoodieRecordPayload, HoodieAvroPayload, OverwriteWithLatestAvroPayload, PartialUpdateAvroPayload, WriteOperationType}
+import org.apache.hudi.common.table.{HoodieTableConfig, HoodieTableMetaClient}
 import org.apache.hudi.config.{HoodieCompactionConfig, HoodieIndexConfig, HoodieWriteConfig}
 import org.apache.hudi.config.HoodieWriteConfig.{TABLE_NAME, TBL_NAME}
 import org.apache.hudi.examples.common.{HoodieExampleDataGenerator, HoodieExampleSparkUtils}
-import org.apache.hudi.hive.HiveSyncConfigHolder
+import org.apache.hudi.hive.{HiveSyncConfig, HiveSyncConfigHolder}
 import org.apache.hudi.index.HoodieIndex.IndexType
 import org.apache.hudi.keygen.constant.KeyGeneratorOptions
 import org.apache.hudi.sync.common.HoodieSyncConfig
@@ -112,14 +112,22 @@ object HoodieDataSourceExample {
     System.setProperty("HADOOP_USER_NAME", "hdfs")
     System.setProperty("user.name", "root")
 
-    testHoodie2Hive(databaseName,tableName,tablePath)
-//    testDelDefautlPartition(tablePath,databaseName,tableName)
+//    testUpgradeHudi(databaseName,tableName,tablePath)
+    testOperationByHudi(tablePath,databaseName,tableName,WriteOperationType.UPSERT.value)
 
-      val roViewDF1 = spark.
+//    val del_df = spark.
+//      read
+//      .format("org.apache.hudi")
+//      .load(tablePath + "/default/*").withColumn("tenant_id",lit("default"))
+//    del_df.show()
+
+      val df = spark.
         read
         .format("org.apache.hudi")
+        .option("hoodie.schema.on.read.enable","true")
         .load(tablePath + "/*")
-      roViewDF1.createOrReplaceTempView("dww")
+
+      df.createOrReplaceTempView("dww")
       spark.sql("select * from dww").show()
 
     //    val commits = spark.sql("select distinct(_hoodie_commit_time) as commitTime from  test order by commitTime").map(k => k.getString(0))(org.apache.spark.sql.Encoders.STRING).take(50)
@@ -150,53 +158,54 @@ object HoodieDataSourceExample {
     sparkConf
   }
 
-  case class TestPartition(id: Int, ts: Int, name: String, age:Integer,date: String)
-  case class TestPartition1(id: Int, ts: Int, name: String,date: String)
-  case class Test1(id: Int, ts: Int, name: String, action: String)
+  case class Test1(id: Int, ts: Int, name: String, tenant_id:String)
+  case class Test2(id: Int, ts: Int, name: String, action: String,tenant_id:String)
 
-  def testHoodie2Hive(databaseName:String,tableName:String,tablePath:String)={
-
-//    val list = new ListBuffer[Test1]();
-//    for (i <- 1 to 10) {
-//      list.+=:(Test1(i, i, "hudi_0.14.0_" + i, "hudi_0.14.0_" + i))
-//    }
-//    println(list.size)
-//    val df = spark.createDataFrame(list)
-
+  //0.11.1 to 0.1.4.0
+  def testUpgradeHudi(databaseName:String,tableName:String,tablePath:String)={
     val df = spark.
       read
       .format("org.apache.hudi")
       .load(tablePath + "/default/*")
+//
+//    val df = spark.
+//      read
+//      .format("org.apache.hudi")
+//      .load(tablePath + "/__HIVE_DEFAULT_PARTITION__/*")
 
-    df.drop("_hoodie_commit_time")
+    val df1 = df.drop("_hoodie_commit_time")
       .drop("_hoodie_commit_seqno")
       .drop("_hoodie_record_key")
       .drop("_hoodie_partition_path")
-      .drop(" _hoodie_file_name")
+      .drop("_hoodie_file_name")
       .withColumn("tenant_id",lit(null))
 
-    println("count = " + df.count())
+    val list = df1.collectAsList()
 
-    df.write.format("org.apache.hudi").
+    val schema = StructType(Array(
+      StructField("id", IntegerType,true),
+      StructField("ts", IntegerType,true),
+      StructField("name", StringType,true),
+      StructField("action", StringType,true),
+      StructField("tenant_id", StringType,true)
+    ))
+
+    val df2 = spark.createDataFrame(list,schema)
+
+    df2.show()
+
+    df2.write.format("org.apache.hudi").
       options(getQuickstartWriteConfigs).
-      option(PRECOMBINE_FIELD_OPT_KEY, "ts").
-      option(RECORDKEY_FIELD_OPT_KEY, "id").
-      option(PARTITIONPATH_FIELD_OPT_KEY, "tenant_id").
+      option(HoodieWriteConfig.PRECOMBINE_FIELD_NAME.key(), "ts").
+      option(KeyGeneratorOptions.RECORDKEY_FIELD_NAME.key(), "id").
+      option(KeyGeneratorOptions.PARTITIONPATH_FIELD_NAME.key(), "tenant_id").
       option("hoodie.skip.default.partition.validation",true).//升级时跳过default分区检查
-      option(TABLE_NAME, tableName).
-      option(PAYLOAD_CLASS_OPT_KEY, classOf[OverwriteNonPartialWithLatestAvroPayload].getName).
-      option(OPERATION_OPT_KEY, WriteOperationType.INSERT_OVERWRITE_TABLE.value()).
-      option(HoodieWriteConfig.UPSERT_PARALLELISM,"10").
-      option(HoodieWriteConfig.INSERT_PARALLELISM,"10").
-      option(HiveSyncConfigHolder.HIVE_SYNC_ENABLED.key(), "true").
-      option(HiveSyncConfigHolder.HIVE_URL.key(), "jdbc:hive2://hive:10000").
-      option(HoodieSyncConfig.META_SYNC_TABLE_NAME.key(), tableName).
-      option(HoodieSyncConfig.META_SYNC_DATABASE_NAME.key(), databaseName).
-      option(HoodieSyncConfig.META_SYNC_PARTITION_FIELDS.key(),"tenant_id").
-      //      option("hoodie.datasource.write.hive_style_partitioning","true").
-      option(HIVE_PARTITION_EXTRACTOR_CLASS_OPT_KEY,"org.apache.hudi.examples.spark.NonDefaultPartitionValueExtractor").
-      //      option("hoodie.clean.async", "true").
-      //      option("hoodie.cleaner.commits.retained", "1").
+//      option("hoodie.datasource.write.reconcile.schema", "true").
+      option(HoodieWriteConfig.TBL_NAME.key, tableName).
+      option(HoodieWriteConfig.WRITE_PAYLOAD_CLASS_NAME.key(), classOf[OverwriteNonPartialWithLatestAvroPayload].getName).
+      option(DataSourceWriteOptions.OPERATION.key(), WriteOperationType.INSERT_OVERWRITE_TABLE.value()).
+      option(HoodieWriteConfig.UPSERT_PARALLELISM_VALUE.key,"10").
+      option(HoodieWriteConfig.INSERT_PARALLELISM_VALUE.key,"10").
       mode(Overwrite).
       save(tablePath)
   }
@@ -205,7 +214,7 @@ object HoodieDataSourceExample {
     val del_df = spark.
       read
       .format("org.apache.hudi")
-      .load(tablePath + "/default/*")
+      .load(tablePath + "/default/*").withColumn("tenant_id",lit("default"))
     del_df.show()
 
     del_df.write
@@ -223,40 +232,58 @@ object HoodieDataSourceExample {
       option(HoodieSyncConfig.META_SYNC_PARTITION_FIELDS.key(),"tenant_id").
       //      option("hoodie.datasource.write.hive_style_partitioning","true").
       option(HIVE_PARTITION_EXTRACTOR_CLASS_OPT_KEY,"org.apache.hudi.examples.spark.NonDefaultPartitionValueExtractor")
-      //      option("hoodie.clean.async", "true").
-      //      option("hoodie.cleaner.commits.retained", "1").
+//            option("hoodie.clean.async", "true").
+//            option("hoodie.cleaner.commits.retained", "1").
       .mode(Append).save(tablePath)
   }
 
-  def testOperationByHudi(spark: SparkSession, tablePath: String, tableName: String, operation: String) = {
-    val list = new ListBuffer[TestPartition]();
-    list.+=:(TestPartition(1, 1, "a1",1, "2015/01/02"))
+  //
+  def testOperationByHudi(tablePath: String, databaseName:String, tableName: String, operation: String) = {
 
-    //    val list = new ListBuffer[TestPartition1]();
-    //    list.+=:(TestPartition1(1, 1, "a2", "2015/01/02"))
+//    val schema = StructType( Array(
+//      StructField("id", IntegerType,true),
+//      StructField("ts", IntegerType,true),
+//      StructField("name", StringType,true),
+//      StructField("action", StringType,true),
+//    ))
+//
+//    val list = new ListBuffer[Row]();
+//    for (i <- 1 to 2) {
+//      list.+=:(Row(i, i, "hudi_0.14.0_" + i + "_3","hudi_0.14.0_" + i))
+//    }
+//    val df = spark.createDataFrame(list,schema)
 
+    val list = new ListBuffer[Test1]()
+    for (i <- 1 to 1){
+//      list.+=:(Test2(i, i, "cc" + i,null,"0"))
+      list.+=:(Test1(i, 0, "aa" + i,"0"))
+    }
     val df = spark.createDataFrame(list)
     df.write.format("org.apache.hudi").
       options(getQuickstartWriteConfigs).
       option(PRECOMBINE_FIELD.key(), "ts").
       option(RECORDKEY_FIELD.key(), "id").
-      option(PARTITIONPATH_FIELD.key(), "date").
+      option(PARTITIONPATH_FIELD.key(), "tenant_id").
       option(TBL_NAME.key(), tableName).
       option(HoodieCompactionConfig.COPY_ON_WRITE_RECORD_SIZE_ESTIMATE.key(), String.valueOf(150)).
       option(HoodieStorageConfig.PARQUET_COMPRESSION_RATIO_FRACTION.key(), "0.1").
       option(HoodieStorageConfig.PARQUET_MAX_FILE_SIZE.key(), "125829120").
-      option(HoodieWriteConfig.WRITE_PAYLOAD_CLASS_NAME.key(), classOf[OverwriteWithLatestAvroPayload].getName).
+      option(HoodieWriteConfig.WRITE_PAYLOAD_CLASS_NAME.key(), classOf[PartialUpdateAvroPayload].getName). //这个payload无法实现更新成null的效果，而且由于在combineAndGetUpdateValue()中还判断了orderingFiled，导致df中的数据不一定能覆盖掉hudi中的数据(例如df中的数据的orderingVal比hudi中的小，就会取hudi中的数据，这和之前df中的数据一定会覆盖hudi数据不同)
+      option("hoodie.datasource.write.schema.allow.auto.evolution.column.drop", "false").
+      option("hoodie.datasource.write.reconcile.schema", "true").
+//      option("hoodie.avro.schema.validate", "false").
+      option("hoodie.datasource.write.drop.partition.columns", "false").
       option(OPERATION.key(), operation).
       //索引
-      option(HoodieIndexConfig.INDEX_TYPE.key(), IndexType.GLOBAL_BLOOM.name()).
-      option(HoodieIndexConfig.BLOOM_INDEX_UPDATE_PARTITION_PATH_ENABLE.key(), "true").
+      option(HoodieIndexConfig.INDEX_TYPE.key(), IndexType.BLOOM.name()).
       //hive
-      //      option(HiveSyncConfig.HIVE_SYNC_ENABLED.key(), "true").
-      //      option(HiveSyncConfig.HIVE_URL.key(), "jdbc:hive2://hive:10000").
-      //      option(KeyGeneratorOptions.HIVE_STYLE_PARTITIONING_ENABLE.key(), "true").
-      //      option(HoodieSyncConfig.META_SYNC_TABLE_NAME.key(), "dww").
-      //      option(HoodieSyncConfig.META_SYNC_DATABASE_NAME.key(), "default").
-      //      option(HoodieSyncConfig.META_SYNC_PARTITION_FIELDS.key(), "date").
+      option(HiveSyncConfig.HIVE_SYNC_ENABLED.key(), "true").
+      option(HiveSyncConfig.HIVE_URL.key(), "jdbc:hive2://hive:10000").
+      option(KeyGeneratorOptions.HIVE_STYLE_PARTITIONING_ENABLE.key(), "false").
+      option(HoodieSyncConfig.META_SYNC_TABLE_NAME.key(), tableName).
+      option(HoodieSyncConfig.META_SYNC_DATABASE_NAME.key(), databaseName).
+      option(HoodieSyncConfig.META_SYNC_PARTITION_FIELDS.key(), "tenant_id").
+      option(HIVE_PARTITION_EXTRACTOR_CLASS_OPT_KEY,"org.apache.hudi.examples.spark.NonDefaultPartitionValueExtractor").
 
       //      option("hoodie.embed.timeline.server", "false").
       //      option("hoodie.memory.merge.max.size",2048*1024*1024L).

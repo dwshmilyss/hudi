@@ -18,8 +18,8 @@ public class NonDefaultPartitionValueExtractor implements PartitionValueExtracto
                 String[] moreSplit = s.split("=");
                 ValidationUtils.checkArgument(moreSplit.length == 2, "Partition Field (" + s + ") not in expected format");
                 return moreSplit[1];
-            } else if (s.equals("default")) {
-                return null;
+            } else if (s.equals("__HIVE_DEFAULT_PARTITION__")) {
+                return "0";
             } else {
                 return s;
             }
